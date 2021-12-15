@@ -4,9 +4,11 @@
 #include <GLES3/gl3.h>
 #include <iostream>
 #include <vector>
+
 using namespace std;
 
 float minX, minY, maxX, maxY;
+float X1, Y1, X2, Y2;
 
 // 顶点缓冲对象
 unsigned int VBO, VAO, EBO;
@@ -61,10 +63,72 @@ int encode(float x, float y){
 }
 
 void CohenSutherland(float x0, float y0, float x2, float y2){
-	
+	int code, code1, code2;
+	float x, y;
+	// 获取两个端点的编码
+	code1 = encode(x0, y0);
+	code2 = encode(x2, y2);
+	// 都为0则都在窗口内
+	while(code1 != 0 || code2 != 0){
+		if((code1&code2)!=0) break;
+		code = code1;
+		if(code1 == 0)
+			code = code2;
+		if((code & 1) == 1){
+			y = y0 + (y2 - y0)*(minX-x0)/(x2-x0);
+			x = minX;
+		} else if((code & 2) == 2){
+			y = y0 + (y2 - y0)*(maxX-x0)/(x2-x0);
+			x = maxX;
+		} else if((code & 4) == 4){
+			x = x0 + (x2 - x0)*(minY-y0)/(y2-y0);
+			y = minY;
+		} else if ((code&8) == 8) {
+			x = x0 + (x2 - x0)*(maxY-y0)/(y2-y0);
+			y = maxY;
+		}
+
+		if(code == code1){
+			x0 = x;
+			y0 = y;
+			code1 = encode(x, y);
+		} else {
+			x2 = x;
+			y2 = y;
+			code2 = encode(x, y);
+		}
+	}
+	cout<<x0<<"\t"<<y0<<"\t"<<x2<<"\t"<<y2<<endl;
+	arr.push_back(x0*0.001);
+	arr.push_back(y0*0.001);
+	arr.push_back(x2*0.001);
+	arr.push_back(y2*0.001);
 }
 
-void LiangBarsky(){
+void LiangBarsky(float x0, float y0, float x2, float y2){
+	float deltax = x2-x0, deltay = y2-y0;
+	float p[4], q[4];
+	p[0] = -deltax, p[1] = deltax, p[2] = -deltay, p[3] = deltay;
+	q[0] = x0 - minX, q[1] = maxX - x0, q[2] = y0 - minY, q[3] = maxY - y0;
+	// 平行x轴
+	if(deltax==0){
+		if(q[0] < 0 || q[1] <0){
+			// not in
+			cout<<"not in windows"<<endl;
+			return ;
+		} else {
+			// 计算
+			
+		}
+	} else if(deltay == 0){
+		// 平行y轴
+		if(q[2] < 0 || q[3] < 0){
+			cout<<"not in windows"<<endl;
+			return ;
+		}
+	} else {
+
+	}
 
 }
 
@@ -107,18 +171,13 @@ void shaders(){
 
 void bind_data(){
 	// 窗口坐标数组
-	float myWindows[8];
-	for(int i = 0; i < 8; i++){
+	float myWindows[12];
+	for(int i = 0; i < 12; i++){
 		myWindows[i] = arr[i];
 	}
-	// int len = arr.size();
-	// float vertices[len];
-	// for(int i = 0; i < len; i++){
-	// 	vertices[i] = arr[i];
-	// }
-	// for(int i = 0; i < 8; i++){
-	// 	cout<<myWindows[i]<<"\t";
-	// }
+	for(int i = 0; i < 12; i++){
+		cout<<myWindows[i]<<"\t";
+	}
 
 	glGenVertexArrays(1, &VAO);
 	glGenBuffers(1, &VBO);
@@ -136,6 +195,9 @@ int main(){
 	cout<<"输入窗口左下角与右上角坐标:";
 	cin>>minX>>minY>>maxX>>maxY;
 	getWindowsPosition();
+	cout<<"输入线段的左右端点坐标：";
+	cin>>X1>>Y1>>X2>>Y2;
+	CohenSutherland(X1, Y1, X2, Y2);
     glfwInit();
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR,3);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR,3);
@@ -163,8 +225,9 @@ int main(){
 		glBindVertexArray(VAO);
 
 		// 窗口
-		glDrawArrays(GL_LINE_LOOP, 0, 4); // 画线
-
+		glDrawArrays(GL_LINE_LOOP, 0, 4); 
+		glDrawArrays(GL_LINES, 4, 2);
+		
 		glfwSwapBuffers(window);
 		glfwPollEvents();
 	}
